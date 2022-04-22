@@ -23,23 +23,47 @@ class PrioritizedPlanningSolver(object):
         for goal in self.goals:
             self.heuristics.append(compute_heuristics(my_map, goal))
 
+    def append_constraints(self, path, constraints, agent_curr):
+        vertex_constraints = [
+            {
+                'agent': agent,
+                'loc': [path[i]],
+                'timestep': i,
+                'static': i == len(path) - 1
+            }
+            for i in range(len(path)) for agent in range(agent_curr + 1, self.num_of_agents)
+        ]
+        constraints += vertex_constraints
+        edge_constraints = [
+            {
+                'agent': agent,
+                'loc': [path[i - 1], path[i]],
+                'timestep': i
+            } for i in range(1, len(path)) for agent in range(agent_curr + 1, self.num_of_agents)
+        ]
+        constraints += edge_constraints
+        rev_edge_constraints = [
+            {
+                'agent': agent,
+                'loc': [path[i], path[i - 1]],
+                'timestep': i
+            } for i in range(1, len(path)) for agent in range(agent_curr + 1, self.num_of_agents)
+        ]
+        constraints += rev_edge_constraints
+
     def find_solution(self):
         """ Finds paths for all agents from their start locations to their goal locations."""
 
         start_time = timer.time()
         result = []
-        constraints = [
-            {'agent': 0,
-             'loc': [(1, 5)],
-             'timestep': 4
-             }
-        ]
+        constraints = []
 
         for i in range(self.num_of_agents):  # Find path for each agent
             path = a_star(self.my_map, self.starts[i], self.goals[i], self.heuristics[i],
                           i, constraints)
             if path is None:
                 raise BaseException('No solutions')
+            self.append_constraints(path, constraints, i)
             result.append(path)
 
             ##############################
