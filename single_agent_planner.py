@@ -139,7 +139,7 @@ def compare_nodes(n1, n2):
 
 
 def calculate_max_path_length(my_map, constraints):
-    num_vertices = len(my_map)
+    num_vertices = sum([len(d) for d in my_map])
     time_last_goal_reached = 0
     for constraint in constraints:
         # if is a location and not time
@@ -148,7 +148,7 @@ def calculate_max_path_length(my_map, constraints):
             time_last_goal_reached = max(time_last_goal_reached, constraint['timestep'])
     # The longest possible path will wait until all other agents reach their goal (after which the scene will be static)
     # and then will pass through every possible vertex
-    return time_last_goal_reached + num_vertices + 1
+    return time_last_goal_reached + num_vertices
 
 def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
     """ my_map      - binary obstacle map
@@ -181,7 +181,8 @@ def a_star(my_map, start_loc, goal_loc, h_values, agent, constraints):
         for dir in range(5):
             if dir != 4:
                 child_loc = move(curr['loc'], dir)
-                if my_map[child_loc[0]][child_loc[1]]:
+                if child_loc[0] < 0 or child_loc[1] < 0 or child_loc[0] >= len(my_map) or \
+                        child_loc[1] >= len(my_map[child_loc[0]]) or my_map[child_loc[0]][child_loc[1]]:
                     continue
                 child = {'loc': child_loc,
                          'g_val': curr['g_val'] + 1,

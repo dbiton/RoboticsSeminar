@@ -21,14 +21,16 @@ def detect_collision(path1, path2):
 
     vertex_long_prev = get_location(path_long, 0)
     vertex_short_prev = get_location(path_short, 0)
+    if vertex_long_prev == vertex_short_prev:
+        return {'loc': [vertex_long_prev], 'timestep': 0, 'static0': False, 'static1': False}
     for t in range(1, len_path_short):
         vertex_long_curr = get_location(path_long, t)
         vertex_short_curr = get_location(path_short, t)
         if vertex_short_curr == vertex_long_curr:
-            return {'loc': [vertex_short_curr], 'timestep': t}
+            return {'loc': [vertex_short_curr], 'timestep': t, 'static0': False, 'static1': False}
         elif vertex_long_curr == vertex_short_prev and vertex_short_curr == vertex_long_prev:
             # used this such that path1 is always the first even when path2 is longer
-            return {'loc': [get_location(path1, t), get_location(path2, t)], 'timestep': t}
+            return {'loc': [get_location(path2, t), get_location(path1, t)], 'timestep': t, 'static0': False, 'static1': False}
         vertex_long_prev = vertex_long_curr
         vertex_short_prev = vertex_short_curr
 
@@ -36,7 +38,8 @@ def detect_collision(path1, path2):
     for t in range(len_path_short, len(path_long)):
         vertex_long_curr = get_location(path_long, t)
         if vertex_long_curr == vertex_short_last:
-            return {'loc': [vertex_long_curr], 'timestep': t}
+            return {'loc': [vertex_long_curr], 'timestep': t, 'static0': len_path_short < len(path1),
+                    'static1': len_path_short < len(path2)}
     return None
 
 
@@ -46,7 +49,8 @@ def detect_collisions(paths):
     #           A collision can be represented as dictionary that contains the id of the two robots, the vertex or edge
     #           causing the collision, and the timestep at which the collision occurred.
     #           You should use your detect_collision function to find a collision between two robots.
-    return [{'agent0': i, 'agent1': j, 'loc': c['loc'], 'timestep': c['timestep']}
+    return [{'agent0': i, 'agent1': j, 'loc': c['loc'], 'timestep': c['timestep'],
+             'static0': c['static0'], 'static1': c['static1']}
             for i in range(len(paths)) for j in range(i + 1, len(paths))
             if (c := detect_collision(paths[i], paths[j])) and c is not None]
 
@@ -62,14 +66,13 @@ def standard_splitting(collision):
     #                          specified edge at the specified timestep
     if len(collision['loc']) == 1:
         return [
-            {'agent': collision['agent0'], 'loc': collision['loc'], 'timestep': collision['timestep']},
-            {'agent': collision['agent1'], 'loc': collision['loc'], 'timestep': collision['timestep']}
+            {'agent': collision['agent0'], 'loc': collision['loc'], 'timestep': collision['timestep'], 'static': collision['static0']},
+            {'agent': collision['agent1'], 'loc': collision['loc'], 'timestep': collision['timestep'], 'static': collision['static1']}
         ]
-    # len(collision['loc']) == 2
     else:
         return [
             {'agent': collision['agent0'], 'loc': collision['loc'], 'timestep': collision['timestep']},
-            {'agent': collision['agent1'], 'loc': collision['loc'].reverse(), 'timestep': collision['timestep']}
+            {'agent': collision['agent1'], 'loc': collision['loc'][::-1], 'timestep': collision['timestep']}
         ]
 
 
@@ -180,7 +183,7 @@ class CBSSolver(object):
                         'paths': curr['paths']}
                 agent = constraint['agent']
                 path = a_star(self.my_map, self.starts[agent], self.goals[agent], self.heuristics[agent],
-                              agent, root['constraints'])
+                              agent, next['constraints'])
                 if path is not None:
                     next['paths'][agent] = path
                     next['collisions'] = detect_collisions(next['paths'])
